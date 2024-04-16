@@ -1,0 +1,27 @@
+{
+  "mode": "report",
+  "stages": [
+    {
+      "stage": 0,
+      "stage_name": "dev",
+      "hostname": "KEYCLOAK_HOSTNAME",
+      "realm": "KEYCLOAK_REALM",
+      "clients": ["KEYCLOAK_CLIENTS"],
+      "admin_user_client": {
+        "client_id": "KEYCLOAK_SERVICE_ACCOUNT_CLIENT_ID",
+        "client_secret": "KEYCLOAK_SERVICE_ACCOUNT_CLIENT_SECRET"
+      }
+    },
+    {
+      "stage": 1,
+      "stage_name": "qua",
+      "hostname": "KEYCLOAK_HOSTNAME",
+      "realm": "KEYCLOAK_REALM",
+      "clients": ["KEYCLOAK_CLIENTS"],
+      "admin_user_client": {
+        "client_id": "KEYCLOAK_SERVICE_ACCOUNT_CLIENT_ID",
+        "client_secret": "KEYCLOAK_SERVICE_ACCOUNT_CLIENT_SECRET"
+      }
+    }
+  ]
+}
