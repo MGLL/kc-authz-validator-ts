@@ -12,8 +12,8 @@ export const compareResources = async (
   target: Authorization,
 ) => {
   const [sourceResources, targetResources] = await Promise.all([
-    source.resource.getResources(),
-    target.resource.getResources(),
+    source.getResources(),
+    target.getResources(),
   ]);
 
   const resourceReports: ResourceReport[] = [];
@@ -34,9 +34,11 @@ export const compareResources = async (
       );
       if (configReport.shouldInclude) {
         // todo extract targetDataReference here to clarify, create prepare object
-        // todo const currentScopes = targetResource.scopes
-        // todo const missingScopes = target!.scopes!.filter((s) => configReport.missingScopes.includes(s.name)
-        // todo const newScopes = currentScopes.concat(missingScopes);
+        const currentScopes = targetResource.scopes;
+        const missingScopes = target!.scopes!.filter((s) =>
+          configReport.missingScopes.includes(s.name),
+        );
+        const newScopes = currentScopes.concat(missingScopes);
 
         resourceReports.push({
           ...baseReport,
@@ -46,11 +48,7 @@ export const compareResources = async (
           targetDataReference: {
             id: configReport.targetDataReference.id,
             uris: targetResource!.uris.concat(configReport.missingUris),
-            scopes: configReport.targetDataReference.scopes.concat(
-              target!.scopes!.filter((s) =>
-                configReport.missingScopes.includes(s.name),
-              ),
-            ),
+            scopes: newScopes,
           },
         });
       }
@@ -134,9 +132,9 @@ export const synchronizeResources = async (
     };
 
     if (report.reportType == ResourceReportType.MISSING_RESOURCE) {
-      await target.resource.createResource(data);
+      await target.resourceManager.createResource(data);
     } else {
-      await target.resource.updateResource(
+      await target.resourceManager.updateResource(
         report.targetDataReference!.id!,
         data,
       );

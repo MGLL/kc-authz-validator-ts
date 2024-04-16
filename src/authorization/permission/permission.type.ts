@@ -21,3 +21,12 @@ export enum PermissionReportType {
   MISSING_POLICIES = 'MISSING_POLICIES',
   EMPTY = '',
 }
+
+export type CreateUpdatePermission = {
+  name: string;
+  description: string;
+  decisionStrategy: string;
+  resources: string[];
+  policies: string[];
+  scopes: string[];
+};

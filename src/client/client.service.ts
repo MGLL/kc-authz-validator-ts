@@ -27,11 +27,14 @@ export const compareClients = async (
   targetClient: Client,
 ) => {
   await verifyAndPopulateClientIds(sourceClient, targetClient);
+  // todo const sourceAuthz = client.generateAuthorization();
+  // todo sourceAuthz.initScopesAndPolicies();
   const [source, target] = [
     new Authorization(sourceClient),
     new Authorization(targetClient),
   ];
   await initScopesAndPolicies(source, target);
+  //
 
   // todo extract report process from there
   const directory = path.join(__dirname, '..', 'report');
