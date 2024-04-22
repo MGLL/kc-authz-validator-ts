@@ -131,6 +131,7 @@ export const synchronizeResources = async (
       attributes: {},
     };
 
+    // todo append change to target to avoid new call
     if (report.reportType == ResourceReportType.MISSING_RESOURCE) {
       await target.resourceManager.createResource(data);
     } else {

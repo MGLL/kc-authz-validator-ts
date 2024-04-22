@@ -3,7 +3,10 @@ import * as fs from 'node:fs';
 import * as config from '../config/config.json';
 import { Client } from './client';
 import { Authorization } from '../authorization/authorization';
-import { comparePermissions } from '../authorization/permission/permission.service';
+import {
+  comparePermissions,
+  synchronizePermissions
+} from '../authorization/permission/permission.service';
 import {
   compareResources,
   synchronizeResources,
@@ -52,12 +55,15 @@ export const compareClients = async (
   }
 
   // todo PermissionComparator class?
-  const permissionReport = await comparePermissions(source, target);
+  const result = await comparePermissions(source, target);
   fs.writeFileSync(
     `${directory}/${sourceClient.stage}-to-${targetClient.stage}-permission-report.json`,
-    JSON.stringify(permissionReport, null, stringifySpace),
+    JSON.stringify(result.report, null, stringifySpace),
     utf8,
   );
 
-  // todo synchronize permissions
+  if (config.mode == Mode.SYNCHRONIZE) {
+    await synchronizePermissions(result.data, target);
+  }
+
 };
