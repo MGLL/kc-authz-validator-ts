@@ -24,11 +24,19 @@ export enum PermissionReportType {
 }
 
 export type CreateUpdatePermission = {
-  type?: string;
+  id?: string;
+  process: string;
+  data: PermissionRequestData;
+}
+
+export type PermissionRequestData = {
+  type: string;
   name: string;
   description: string;
   decisionStrategy: string;
   resources: string[];
   policies: string[];
   scopes: string[];
+  logic?: string;
+  config?: object;
 };

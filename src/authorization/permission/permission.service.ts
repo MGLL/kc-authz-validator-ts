@@ -64,13 +64,17 @@ export const comparePermissions = async (
 
 
         dataToSynchronize.push({
-          type: 'UPDATE',
-          name: targetPermission.name,
-          description: targetPermission.description,
-          decisionStrategy: targetPermission.decisionStrategy,
-          resources: newResources.map(r => r._id),
-          policies: newPolicies.map(p => p.id),
-          scopes: newScopes.map(s => s.id),
+          id: targetPermission.id,
+          process: 'UPDATE',
+          data: {
+            type: sourcePermission.type,
+            name: targetPermission.name,
+            description: sourcePermission.description,
+            decisionStrategy: sourcePermission.decisionStrategy,
+            resources: newResources.map(r => r._id),
+            policies: newPolicies.map(p => p.id),
+            scopes: newScopes.map(s => s.id),
+          }
         });
 
         permissionReports.push({
@@ -93,21 +97,24 @@ export const comparePermissions = async (
       });
 
       dataToSynchronize.push({
-        type: 'CREATE',
-        name: sourcePermission.name,
-        description: sourcePermission.description,
-        decisionStrategy: sourcePermission.decisionStrategy,
-        resources: target
-          .resources!.filter((tr) =>
-            sourcePermission.resources.map((sr) => sr.name).includes(tr.name)
+        process: 'CREATE',
+        data: {
+          type: sourcePermission.type,
+          name: sourcePermission.name,
+          description: sourcePermission.description,
+          decisionStrategy: sourcePermission.decisionStrategy,
+          resources: target
+              .resources!.filter((tr) =>
+              sourcePermission.resources.map((sr) => sr.name).includes(tr.name)
           )
           .map((r) => r._id),
-        policies: target.policies!.filter((tp) =>
-          sourcePermission.policies.map((sp) => sp.name).includes(tp.name)
-        ).map((p) => p.id),
-        scopes: target.scopes!.filter((t) =>
-          sourcePermission.scopes.map((s) => s.name).includes(t.name)
-        ).map((s) => s.id),
+          policies: target.policies!.filter((tp) =>
+              sourcePermission.policies.map((sp) => sp.name).includes(tp.name)
+          ).map((p) => p.id),
+          scopes: target.scopes!.filter((t) =>
+              sourcePermission.scopes.map((s) => s.name).includes(t.name)
+          ).map((s) => s.id),
+        }
       });
     }
   }
@@ -186,15 +193,14 @@ export const synchronizePermissions = async (
   target: Authorization,
 ) => {
   for (const permission of permissions) {
-    const data = {
-      ...permission
-    };
-    delete data.type;
-
-    if (permission.type === 'CREATE') {
-      await target.permissionManager.createPermission(data);
+    if (permission.process === 'CREATE') {
+      const createdPermission = await target.permissionManager.createPermission(permission.data);
+      console.log(`created permission`, createdPermission);
+      // todo append new permission to target
+      //target.permissions!.push(createdPermission);
     } else {
-      await target.permissionManager.updatePermission('', data);
+      // todo append new state to target, rebuild a detailedPermission
+      await target.permissionManager.updatePermission(permission.id!, permission.data);
     }
   }
 };

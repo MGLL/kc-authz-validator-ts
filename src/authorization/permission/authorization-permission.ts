@@ -8,7 +8,7 @@ import {
 } from '../authorization.type';
 import { SimpleResource } from '../resource/resource.type';
 import { Client } from '../../client/client';
-import { CreateUpdatePermission } from './permission.type';
+import {CreateUpdatePermission, PermissionRequestData} from './permission.type';
 
 export class AuthorizationPermission extends AuthorizationType {
   constructor(client: Client) {
@@ -97,21 +97,27 @@ export class AuthorizationPermission extends AuthorizationType {
     }
   };
 
-  createPermission = async (data: CreateUpdatePermission) => {
-    console.log('create', data);
+  createPermission = async (data: PermissionRequestData) => {
     try {
+      const uri = this.getPermissionUri();
+      const config = await this.getBaseConfig();
+      const response = await axios.post<PermissionRequestData>(uri, data, config);
+      return response.data;
     } catch (error) {
-      console.log(error);
-      return undefined;
+      console.log(`error in creating permission`, error);
+      throw error;
     }
   };
 
-  updatePermission = async (id: string, data: CreateUpdatePermission) => {
-    console.log(`update ${id} with `, data);
+  updatePermission = async (id: string, data: PermissionRequestData) => {
     try {
+      const uri = this.getPermissionUri() + `/${id}`;
+      const config = await this.getBaseConfig();
+      const response = await axios.put(uri, data, config);
+      return response.data;
     } catch (error) {
-      console.log(error);
-      return undefined;
+      console.log(`error in updating permission`, error);
+      throw error;
     }
   };
 }

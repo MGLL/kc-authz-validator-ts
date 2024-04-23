@@ -120,6 +120,7 @@ export const synchronizeResources = async (
   target: Authorization,
 ) => {
   for (const report of reports) {
+    // todo refactor
     const data = {
       name: report.name,
       displayName: report.displayName,
@@ -131,10 +132,11 @@ export const synchronizeResources = async (
       attributes: {},
     };
 
-    // todo append change to target to avoid new call
     if (report.reportType == ResourceReportType.MISSING_RESOURCE) {
-      await target.resourceManager.createResource(data);
+      const createdResource = await target.resourceManager.createResource(data);
+      target.resources!.push(createdResource);
     } else {
+      // todo update target resource based on resource
       await target.resourceManager.updateResource(
         report.targetDataReference!.id!,
         data,

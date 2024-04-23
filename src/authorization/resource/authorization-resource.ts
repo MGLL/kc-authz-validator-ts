@@ -28,11 +28,11 @@ export class AuthorizationResource extends AuthorizationType {
     try {
       const uri = this.getResourceUri();
       const config = await this.getBaseConfig();
-      const response = await axios.post(uri, data, config);
+      const response = await axios.post<Resource>(uri, data, config);
       return response.data;
     } catch (error) {
-      console.log(error);
-      return undefined;
+      console.log(`error in creating resource:`, error);
+      throw error;
     }
   };
 
@@ -43,8 +43,8 @@ export class AuthorizationResource extends AuthorizationType {
       const response = await axios.put(uri, data, config);
       return response.data;
     } catch (error) {
-      console.log(error);
-      return undefined;
+      console.log(`error in updating resource`, error);
+      throw error;
     }
   };
 }
