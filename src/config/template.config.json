@@ -22,6 +22,17 @@
         "client_id": "KEYCLOAK_SERVICE_ACCOUNT_CLIENT_ID",
         "client_secret": "KEYCLOAK_SERVICE_ACCOUNT_CLIENT_SECRET"
       }
+    },
+    {
+      "stage": 2,
+      "stage_name": "prod",
+      "hostname": "KEYCLOAK_HOSTNAME",
+      "realm": "KEYCLOAK_REALM",
+      "clients": ["KEYCLOAK_CLIENTS"],
+      "admin_user_client": {
+        "client_id": "KEYCLOAK_SERVICE_ACCOUNT_CLIENT_ID",
+        "client_secret": "KEYCLOAK_SERVICE_ACCOUNT_CLIENT_SECRET"
+      }
     }
   ]
 }

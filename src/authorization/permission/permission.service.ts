@@ -1,22 +1,30 @@
 import { DetailedPermission } from '../authorization.type';
 import { compareConfiguration, searchMatching } from '../../utils/comparator';
 import {
+  CreateUpdatePermission,
   PermissionConfigurationComparisonResult,
   PermissionReport,
   PermissionReportType,
 } from './permission.type';
 import { Authorization } from '../authorization';
+import assert from 'node:assert';
 
 export const comparePermissions = async (
   source: Authorization,
   target: Authorization,
 ) => {
-  const [sourcePermissions, targetPermissions] = await Promise.all([
-    source.permission.getDetailedPermissions(),
-    target.permission.getDetailedPermissions(),
-  ]);
+  assert(source.resources !== undefined);
+  assert(target.resources !== undefined);
+  const [sourcePermissions, targetPermissions] = await getPermissions(
+    source,
+    target,
+  );
+  assert(sourcePermissions !== undefined);
+  assert(targetPermissions !== undefined);
 
   const permissionReports: PermissionReport[] = [];
+  const dataToSynchronize: CreateUpdatePermission[] = [];
+
   for (const sourcePermission of sourcePermissions) {
     const targetPermission = searchMatching(
       sourcePermission,
@@ -34,12 +42,47 @@ export const comparePermissions = async (
         sourcePermission,
         targetPermission,
       );
+
       if (comparisonReport.shouldInclude) {
+        const currentScopes = targetPermission.scopes;
+        const missingScopes = target!.scopes!.filter((s) =>
+            comparisonReport.scopes.includes(s.name),
+        );
+        const newScopes = currentScopes.concat(missingScopes);
+
+        const currentResources = targetPermission.resources;
+        const missingResources = target!.resources!.filter((r) =>
+            comparisonReport.resources.includes(r.name),
+        );
+        const newResources = currentResources.concat(missingResources);
+
+        const currentPolicies = targetPermission.policies;
+        const missingPolicies = target!.policies!.filter((p) =>
+            comparisonReport.policies.includes(p.name),
+        );
+        const newPolicies = currentPolicies.concat(missingPolicies);
+
+
+        dataToSynchronize.push({
+          id: targetPermission.id,
+          process: 'UPDATE',
+          data: {
+            type: sourcePermission.type,
+            name: targetPermission.name,
+            description: sourcePermission.description,
+            decisionStrategy: sourcePermission.decisionStrategy,
+            logic: sourcePermission.logic,
+            resources: newResources.map(r => r._id),
+            policies: newPolicies.map(p => p.id),
+            scopes: newScopes.map(s => s.id),
+          }
+        });
+
         permissionReports.push({
           ...baseReport,
           resources: comparisonReport.resources,
           policies: comparisonReport.policies,
-          scopes: sourcePermission.scopes.map((scope) => scope.name),
+          scopes: comparisonReport.scopes,
           reportType: comparisonReport.reportType,
         });
       }
@@ -51,12 +94,47 @@ export const comparePermissions = async (
         ),
         policies: sourcePermission.policies.map((policy) => policy.name),
         scopes: sourcePermission.scopes.map((scope) => scope.name),
-        reportType: PermissionReportType.MISSING_PERMISSION,
+        reportType: [PermissionReportType.MISSING_PERMISSION],
+      });
+
+      dataToSynchronize.push({
+        process: 'CREATE',
+        data: {
+          type: sourcePermission.type,
+          name: sourcePermission.name,
+          logic: sourcePermission.logic,
+          description: sourcePermission.description,
+          decisionStrategy: sourcePermission.decisionStrategy,
+          resources: target
+              .resources!.filter((tr) =>
+              sourcePermission.resources.map((sr) => sr.name).includes(tr.name)
+          )
+          .map((r) => r._id),
+          policies: target.policies!.filter((tp) =>
+              sourcePermission.policies.map((sp) => sp.name).includes(tp.name)
+          ).map((p) => p.id),
+          scopes: target.scopes!.filter((t) =>
+              sourcePermission.scopes.map((s) => s.name).includes(t.name)
+          ).map((s) => s.id),
+        }
       });
     }
   }
 
-  return permissionReports;
+  return {report: permissionReports, data: dataToSynchronize};
+};
+
+const getPermissions = async (source: Authorization, target: Authorization) => {
+  if (source.permissions === undefined && target.permissions === undefined) {
+    return await Promise.all([
+      source.getPermissions(),
+      target.getPermissions(),
+    ]);
+  } else if (target.permissions === undefined) {
+    return [source.permissions, await target.getPermissions()];
+  } else {
+    return [await source.getPermissions(), target.permissions];
+  }
 };
 
 const comparePermissionConfigurations = (
@@ -67,33 +145,62 @@ const comparePermissionConfigurations = (
     source.resources,
     target.resources,
   );
+  const hasMissingResources = missingPermissionResources.length != 0;
+
   const missingPermissionPolicies = compareConfiguration(
     source.policies,
     target.policies,
   );
-
-  const hasMissingResources = missingPermissionResources.length != 0;
   const hasMissingPolicies = missingPermissionPolicies.length != 0;
+
+  const missingPermissionScopes = compareConfiguration(
+      source.scopes,
+      target.scopes
+  );
+  const hasMissingScopes = missingPermissionScopes.length != 0;
 
   return {
     resources: missingPermissionResources.map((r) => r.name),
     policies: missingPermissionPolicies.map((p) => p.name),
-    reportType: getReportType(hasMissingResources, hasMissingPolicies),
-    shouldInclude: hasMissingResources || hasMissingPolicies,
+    scopes: missingPermissionScopes.map((s) => s.name),
+    reportType: getReportType(hasMissingResources, hasMissingPolicies, hasMissingScopes),
+    shouldInclude: hasMissingResources || hasMissingPolicies || hasMissingScopes,
   };
 };
 
 const getReportType = (
   hasMissingResources: boolean,
   hasMissingPolicies: boolean,
+  hasMissingScopes: boolean
 ) => {
-  if (hasMissingResources && hasMissingPolicies) {
-    return PermissionReportType.MISSING_RESOURCES_AND_POLICIES;
-  } else if (hasMissingResources) {
-    return PermissionReportType.MISSING_RESOURCES;
-  } else if (hasMissingPolicies) {
-    return PermissionReportType.MISSING_POLICIES;
-  } else {
-    return PermissionReportType.EMPTY;
+  const missingElements = [];
+
+  if (hasMissingScopes) {
+    missingElements.push(PermissionReportType.MISSING_SCOPES);
+  }
+
+  if (hasMissingResources) {
+    missingElements.push(PermissionReportType.MISSING_RESOURCES)
+  }
+
+  if (hasMissingPolicies) {
+    missingElements.push(PermissionReportType.MISSING_POLICIES)
+  }
+
+  return missingElements;
+};
+
+export const synchronizePermissions = async (
+  permissions: CreateUpdatePermission[],
+  target: Authorization,
+) => {
+  for (const permission of permissions) {
+    if (permission.process === 'CREATE') {
+      const createdPermission = await target.permissionManager.createPermission(permission.data);
+      target.pushNewPermissionToCache(createdPermission);
+    } else {
+      await target.permissionManager.updatePermission(permission.id!, permission.data);
+      target.updateCachedPermission(permission);
+    }
   }
 };

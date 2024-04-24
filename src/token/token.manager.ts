@@ -3,7 +3,10 @@ import { AuthenticationContext } from '../stage/stage.type';
 import { TokenManager } from './token.type';
 
 export class TokenManagerFactory {
-  public static newTokenManager(type: string, authenticationContext: AuthenticationContext): TokenManager {
+  public static newTokenManager(
+    type: string,
+    authenticationContext: AuthenticationContext,
+  ): TokenManager {
     switch (type.toLowerCase()) {
       case 'default':
         return new DefaultTokenManager(authenticationContext);

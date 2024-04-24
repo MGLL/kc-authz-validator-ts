@@ -8,6 +8,7 @@ import {
 } from '../authorization.type';
 import { SimpleResource } from '../resource/resource.type';
 import { Client } from '../../client/client';
+import {CreateUpdatePermission, PermissionRequestData} from './permission.type';
 
 export class AuthorizationPermission extends AuthorizationType {
   constructor(client: Client) {
@@ -22,7 +23,7 @@ export class AuthorizationPermission extends AuthorizationType {
     const permissions = await this.getPermissions();
     const detailedPermissions: DetailedPermission[] = [];
 
-    // Todo try to split for faster retrieval
+    // todo split and parallelize?
     for (const permission of permissions) {
       const detailedPermission = new DetailedPermission(permission);
 
@@ -93,6 +94,30 @@ export class AuthorizationPermission extends AuthorizationType {
     } catch (error) {
       console.log(error);
       return [];
+    }
+  };
+
+  createPermission = async (data: PermissionRequestData) => {
+    try {
+      const uri = this.getPermissionUri();
+      const config = await this.getBaseConfig();
+      const response = await axios.post<PermissionRequestData>(uri, data, config);
+      return response.data;
+    } catch (error) {
+      console.log(`error in creating permission`, error);
+      throw error;
+    }
+  };
+
+  updatePermission = async (id: string, data: PermissionRequestData) => {
+    try {
+      const uri = this.getPermissionUri() + `/${id}`;
+      const config = await this.getBaseConfig();
+      const response = await axios.put(uri, data, config);
+      return response.data;
+    } catch (error) {
+      console.log(`error in updating permission`, error);
+      throw error;
     }
   };
 }

@@ -24,3 +24,16 @@ services:
       - ./test-data/stage-2/:/opt/keycloak/data/import
     ports:
       - "8082:8080"
+
+  keycloak-3:
+    image: quay.io/keycloak/keycloak:23.0.7
+    container_name: keycloak-3
+    restart: always
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    volumes:
+      - ./test-data/stage-3/:/opt/keycloak/data/import
+    ports:
+      - "8083:8080"

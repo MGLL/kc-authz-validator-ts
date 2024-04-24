@@ -1,5 +1,6 @@
 import { TokenManager } from '../token/token.type';
 import { Stage } from '../stage/stage';
+import { Authorization } from '../authorization/authorization';
 
 export class Client {
   readonly name: string;
@@ -7,6 +8,7 @@ export class Client {
   readonly stage: string;
   readonly tokenManager: TokenManager;
   readonly adminUri: string;
+  authorization?: Authorization;
 
   constructor(clientId: string, clientName: string, stage: Stage) {
     this.id = clientId;

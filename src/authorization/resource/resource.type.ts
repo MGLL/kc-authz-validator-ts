@@ -14,27 +14,6 @@ export interface Resource extends SimpleResource {
   scopes: Scope[];
 }
 
-export type CreateUpdateResource = {
-  name: string;
-  displayName: string;
-  type: string;
-  icon_uri: string;
-  scopes: Scope[];
-  ownerManagedAccess: boolean;
-  uris: string[];
-  attributes: object;
-};
-
-export interface Resource extends CreateUpdateResource {
-  _id: string;
-}
-
-type TargetResourceSync = {
-  id?: string;
-  uris: string[];
-  scopes: Scope[];
-};
-
 export type ResourceReport = {
   name: string;
   displayName: string;
@@ -42,7 +21,6 @@ export type ResourceReport = {
   missingUris: string[];
   missingScopes: string[];
   reportType: ResourceReportType;
-  targetDataReference?: TargetResourceSync;
 };
 
 export type ResourceConfigurationComparisonResult = {
@@ -50,7 +28,6 @@ export type ResourceConfigurationComparisonResult = {
   missingUris: string[];
   missingScopes: string[];
   reportType: ResourceReportType;
-  targetDataReference: TargetResourceSync;
 };
 
 export enum ResourceReportType {
@@ -59,4 +36,33 @@ export enum ResourceReportType {
   MISSING_URIS = 'MISSING_URIS',
   MISSING_SCOPES = 'MISSING_SCOPES',
   EMPTY = '',
+}
+
+export type CreateUpdateResource = {
+  id?: string;
+  process: 'CREATE' | 'UPDATE';
+  data: ResourceRequestData;
+};
+
+export type ResourceRequestData = {
+  name: string;
+  displayName: string;
+  type: string;
+  icon_uri: string;
+  ownerManagedAccess: boolean;
+  scopes: Scope[];
+  uris: string[];
+  attributes: object;
+}
+
+export interface Resource {
+  _id: string;
+  name: string;
+  displayName: string;
+  type: string;
+  icon_uri: string;
+  ownerManagedAccess: boolean;
+  scopes: Scope[];
+  uris: string[];
+  attributes: object;
 }
