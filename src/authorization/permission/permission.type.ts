@@ -25,11 +25,12 @@ export enum PermissionReportType {
 
 export type CreateUpdatePermission = {
   id?: string;
-  process: string;
+  process: 'CREATE' | 'UPDATE';
   data: PermissionRequestData;
 }
 
 export type PermissionRequestData = {
+  id?: string;
   type: string;
   name: string;
   description: string;
@@ -37,6 +38,6 @@ export type PermissionRequestData = {
   resources: string[];
   policies: string[];
   scopes: string[];
-  logic?: string;
+  logic: string;
   config?: object;
 };

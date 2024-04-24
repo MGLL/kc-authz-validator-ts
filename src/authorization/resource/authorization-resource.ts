@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { AuthorizationType } from '../authorization.type';
 import { Client } from '../../client/client';
-import { CreateUpdateResource, Resource } from './resource.type';
+import { Resource, ResourceRequestData } from './resource.type';
 
 export class AuthorizationResource extends AuthorizationType {
   constructor(client: Client) {
@@ -19,12 +19,12 @@ export class AuthorizationResource extends AuthorizationType {
       const response = await axios.get<Resource[]>(uri, config);
       return response.data;
     } catch (error) {
-      console.log(error);
-      return [];
+      console.log(`error in retrieving resource:`, error);
+      throw error;
     }
   };
 
-  createResource = async (data: CreateUpdateResource) => {
+  createResource = async (data: ResourceRequestData) => {
     try {
       const uri = this.getResourceUri();
       const config = await this.getBaseConfig();
@@ -36,7 +36,7 @@ export class AuthorizationResource extends AuthorizationType {
     }
   };
 
-  updateResource = async (id: string, data: CreateUpdateResource) => {
+  updateResource = async (id: string, data: ResourceRequestData) => {
     try {
       const uri = this.getResourceUri() + `/${id}`;
       const config = await this.getBaseConfig();

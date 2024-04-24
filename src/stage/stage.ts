@@ -1,6 +1,11 @@
 import { Client } from '../client/client';
 import { TokenManagerFactory } from '../token/token.manager';
-import { AuthenticationContext, RawStageConfig, StageUri, UserClient } from './stage.type';
+import {
+  AuthenticationContext,
+  RawStageConfig,
+  StageUri,
+  UserClient,
+} from './stage.type';
 import { TokenManager } from '../token/token.type';
 
 export class Stage {
@@ -20,9 +25,15 @@ export class Stage {
 
     const authenticationContext: AuthenticationContext = {
       tokenUri: this.uri.tokenUri,
-      user: new UserClient(env.admin_user_client.client_id, env.admin_user_client.client_secret),
+      user: new UserClient(
+        env.admin_user_client.client_id,
+        env.admin_user_client.client_secret,
+      ),
     };
-    this.tokenManager = TokenManagerFactory.newTokenManager('default', authenticationContext);
+    this.tokenManager = TokenManagerFactory.newTokenManager(
+      'default',
+      authenticationContext,
+    );
 
     for (const client of env.clients) {
       this.clients.push(new Client('', client, this));

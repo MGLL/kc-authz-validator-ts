@@ -42,8 +42,8 @@ export const comparePermissions = async (
         sourcePermission,
         targetPermission,
       );
-      if (comparisonReport.shouldInclude) {
 
+      if (comparisonReport.shouldInclude) {
         const currentScopes = targetPermission.scopes;
         const missingScopes = target!.scopes!.filter((s) =>
             comparisonReport.scopes.includes(s.name),
@@ -71,6 +71,7 @@ export const comparePermissions = async (
             name: targetPermission.name,
             description: sourcePermission.description,
             decisionStrategy: sourcePermission.decisionStrategy,
+            logic: sourcePermission.logic,
             resources: newResources.map(r => r._id),
             policies: newPolicies.map(p => p.id),
             scopes: newScopes.map(s => s.id),
@@ -101,6 +102,7 @@ export const comparePermissions = async (
         data: {
           type: sourcePermission.type,
           name: sourcePermission.name,
+          logic: sourcePermission.logic,
           description: sourcePermission.description,
           decisionStrategy: sourcePermission.decisionStrategy,
           resources: target
@@ -195,12 +197,10 @@ export const synchronizePermissions = async (
   for (const permission of permissions) {
     if (permission.process === 'CREATE') {
       const createdPermission = await target.permissionManager.createPermission(permission.data);
-      console.log(`created permission`, createdPermission);
-      // todo append new permission to target
-      //target.permissions!.push(createdPermission);
+      target.pushNewPermissionToCache(createdPermission);
     } else {
-      // todo append new state to target, rebuild a detailedPermission
       await target.permissionManager.updatePermission(permission.id!, permission.data);
+      target.updateCachedPermission(permission);
     }
   }
 };

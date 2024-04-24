@@ -1,22 +1,25 @@
 import { compareConfiguration, searchMatching } from '../../utils/comparator';
 import { Authorization } from '../authorization';
 import {
+  CreateUpdateResource,
   Resource,
   ResourceConfigurationComparisonResult,
   ResourceReport,
   ResourceReportType,
 } from './resource.type';
+import assert from "node:assert";
 
 export const compareResources = async (
   source: Authorization,
   target: Authorization,
 ) => {
-  const [sourceResources, targetResources] = await Promise.all([
-    source.getResources(),
-    target.getResources(),
-  ]);
+  const [sourceResources, targetResources] = await getResources(source, target);
+  assert(sourceResources !== undefined);
+  assert(targetResources !== undefined);
 
   const resourceReports: ResourceReport[] = [];
+  const dataToSynchronize: CreateUpdateResource[] = [];
+
   for (const sourceResource of sourceResources) {
     const targetResource = searchMatching(sourceResource, targetResources);
     const hasResource = targetResource != undefined;
@@ -28,28 +31,38 @@ export const compareResources = async (
     };
 
     if (hasResource) {
-      const configReport = compareResourceConfigurations(
+      const comparisonReport = compareResourceConfigurations(
         sourceResource,
         targetResource,
       );
-      if (configReport.shouldInclude) {
-        // todo extract targetDataReference here to clarify, create prepare object
+
+      if (comparisonReport.shouldInclude) {
         const currentScopes = targetResource.scopes;
         const missingScopes = target!.scopes!.filter((s) =>
-          configReport.missingScopes.includes(s.name),
+            comparisonReport.missingScopes.includes(s.name),
         );
         const newScopes = currentScopes.concat(missingScopes);
 
+        dataToSynchronize.push({
+          id: targetResource._id,
+          process: 'UPDATE',
+          data: {
+            type: sourceResource.type,
+            name: sourceResource.name,
+            displayName: sourceResource.displayName,
+            icon_uri: sourceResource.icon_uri,
+            ownerManagedAccess: sourceResource.ownerManagedAccess,
+            scopes: newScopes,
+            uris: sourceResource.uris,
+            attributes: sourceResource.attributes
+          }
+        });
+
         resourceReports.push({
           ...baseReport,
-          missingUris: configReport.missingUris,
-          missingScopes: configReport.missingScopes,
-          reportType: configReport.reportType,
-          targetDataReference: {
-            id: configReport.targetDataReference.id,
-            uris: targetResource!.uris.concat(configReport.missingUris),
-            scopes: newScopes,
-          },
+          missingUris: comparisonReport.missingUris,
+          missingScopes: comparisonReport.missingScopes,
+          reportType: comparisonReport.reportType,
         });
       }
     } else {
@@ -63,17 +76,38 @@ export const compareResources = async (
         missingUris: sourceResource.uris,
         missingScopes: sourceScopes,
         reportType: ResourceReportType.MISSING_RESOURCE,
-        targetDataReference: {
-          id: undefined,
-          uris: sourceResource.uris,
+      });
+
+      dataToSynchronize.push({
+        process: 'CREATE',
+        data: {
+          type: sourceResource.type,
+          name: sourceResource.name,
+          displayName: sourceResource.displayName,
+          icon_uri: sourceResource.icon_uri,
+          ownerManagedAccess: sourceResource.ownerManagedAccess,
           scopes: matchingTargetScopes,
-        },
+          uris: sourceResource.uris,
+          attributes: sourceResource.attributes,
+        }
       });
     }
   }
 
-  // todo maybe split return: report & syncData
-  return resourceReports;
+  return {report: resourceReports, data: dataToSynchronize};
+};
+
+const getResources = async (source: Authorization, target: Authorization) => {
+  if (source.resources === undefined && target.resources === undefined) {
+    return await Promise.all([
+      source.getResources(),
+      target.getResources(),
+    ]);
+  } else if (target.resources === undefined) {
+    return [source.resources, await target.getResources()];
+  } else {
+    return [await source.getResources(), target.resources];
+  }
 };
 
 const compareResourceConfigurations = (
@@ -89,17 +123,11 @@ const compareResourceConfigurations = (
   const missingScopes = compareConfiguration(source.scopes, target.scopes);
   const hasMissingScopes = missingScopes.length != 0;
 
-  // todo remove targetDataReference from here
   return {
     shouldInclude: hasMissingUris || hasMissingScopes,
     missingUris: missingUris.map((uri) => uri.name),
     missingScopes: missingScopes.map((scope) => scope.name),
     reportType: getReportType(hasMissingUris, hasMissingScopes),
-    targetDataReference: {
-      id: target._id,
-      uris: [],
-      scopes: target.scopes,
-    },
   };
 };
 
@@ -116,31 +144,16 @@ const getReportType = (hasMissingUris: boolean, hasMissingScopes: boolean) => {
 };
 
 export const synchronizeResources = async (
-  reports: ResourceReport[],
+  resources: CreateUpdateResource[],
   target: Authorization,
 ) => {
-  for (const report of reports) {
-    // todo refactor
-    const data = {
-      name: report.name,
-      displayName: report.displayName,
-      type: report.type,
-      icon_uri: '',
-      uris: report.targetDataReference!.uris,
-      scopes: report.targetDataReference!.scopes,
-      ownerManagedAccess: false,
-      attributes: {},
-    };
-
-    if (report.reportType == ResourceReportType.MISSING_RESOURCE) {
-      const createdResource = await target.resourceManager.createResource(data);
-      target.resources!.push(createdResource);
+  for (const resource of resources) {
+    if (resource.process === 'CREATE') {
+      const createdResource = await target.resourceManager.createResource(resource.data);
+      target.pushNewResourceToCache(createdResource);
     } else {
-      // todo update target resource based on resource
-      await target.resourceManager.updateResource(
-        report.targetDataReference!.id!,
-        data,
-      );
+      await target.resourceManager.updateResource(resource.id!, resource.data);
+      target.updateCachedResource(resource);
     }
   }
 };

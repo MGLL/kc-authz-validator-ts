@@ -1,5 +1,6 @@
 import { Client } from '../client/client';
 import { SimpleResource } from './resource/resource.type';
+import { PermissionRequestData } from './permission/permission.type';
 
 export abstract class AuthorizationType {
   readonly client: Client;
@@ -46,7 +47,7 @@ export interface Policy extends AuthorizationMetaData {
 
 export interface Permission extends AuthorizationMetaData {}
 
-export class DetailedPermission implements Permission {
+export class DetailedPermission {
   id: string;
   name: string;
   description: string;
@@ -64,5 +65,18 @@ export class DetailedPermission implements Permission {
     this.decisionStrategy = permission.decisionStrategy;
     this.logic = permission.logic;
     this.type = permission.type;
+  }
+
+  public static fromPermissionRequestData(
+    newPermission: PermissionRequestData,
+  ): DetailedPermission {
+    return new DetailedPermission({
+      id: newPermission.id!,
+      name: newPermission.name,
+      description: newPermission.description,
+      logic: newPermission.logic!,
+      type: newPermission.type,
+      decisionStrategy: newPermission.decisionStrategy,
+    });
   }
 }

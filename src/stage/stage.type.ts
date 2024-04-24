@@ -25,7 +25,10 @@ export class UserClient {
   }
 
   getHasUrlSearchParams(): url.URLSearchParams {
-    return new url.URLSearchParams({ client_id: this.clientId, client_secret: this.clientSecret });
+    return new url.URLSearchParams({
+      client_id: this.clientId,
+      client_secret: this.clientSecret,
+    });
   }
 }
 

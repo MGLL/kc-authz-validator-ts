@@ -5,7 +5,7 @@ import { Client } from './client';
 import { Authorization } from '../authorization/authorization';
 import {
   comparePermissions,
-  synchronizePermissions
+  synchronizePermissions,
 } from '../authorization/permission/permission.service';
 import {
   compareResources,
@@ -15,13 +15,10 @@ import {
   initScopesAndPolicies,
   verifyAndPopulateClientIds,
 } from '../utils/initializer';
+import { Mode } from '../type/type';
+import assert from 'node:assert';
 
-// todo move away
-export enum Mode {
-  REPORT = 'report',
-  SYNCHRONIZE = 'synchronize',
-}
-
+// todo move to report process
 const utf8 = 'utf-8';
 const stringifySpace = 2;
 
@@ -32,10 +29,9 @@ export const compareClients = async (
   await verifyAndPopulateClientIds(sourceClient, targetClient);
   // todo const sourceAuthz = client.generateAuthorization();
   // todo sourceAuthz.initScopesAndPolicies();
-  const [source, target] = [
-    new Authorization(sourceClient),
-    new Authorization(targetClient),
-  ];
+  const [source, target] = getAuthorization(sourceClient, targetClient);
+  assert(source !== undefined);
+  assert(target !== undefined);
   await initScopesAndPolicies(source, target);
   //
 
@@ -43,27 +39,41 @@ export const compareClients = async (
   const directory = path.join(__dirname, '..', 'report');
 
   // todo ResourceComparator class?
-  const resourceReport = await compareResources(source, target);
+  const resourceComparisonResult = await compareResources(source, target);
   fs.writeFileSync(
     `${directory}/${sourceClient.stage}-to-${targetClient.stage}-resource-report.json`,
-    JSON.stringify(resourceReport, null, stringifySpace),
+    JSON.stringify(resourceComparisonResult.report, null, stringifySpace),
     utf8,
   );
 
   if (config.mode == Mode.SYNCHRONIZE) {
-    await synchronizeResources(resourceReport, target);
+    await synchronizeResources(resourceComparisonResult.data, target);
   }
 
   // todo PermissionComparator class?
-  const result = await comparePermissions(source, target);
+  const permissionComparisonResult = await comparePermissions(source, target);
   fs.writeFileSync(
     `${directory}/${sourceClient.stage}-to-${targetClient.stage}-permission-report.json`,
-    JSON.stringify(result.report, null, stringifySpace),
+    JSON.stringify(permissionComparisonResult.report, null, stringifySpace),
     utf8,
   );
 
   if (config.mode == Mode.SYNCHRONIZE) {
-    await synchronizePermissions(result.data, target);
+    await synchronizePermissions(permissionComparisonResult.data, target);
   }
 
+  targetClient.authorization = target;
+};
+
+const getAuthorization = (sourceClient: Client, targetClient: Client) => {
+  if (
+    sourceClient.authorization === undefined &&
+    targetClient.authorization === undefined
+  ) {
+    return [new Authorization(sourceClient), new Authorization(targetClient)];
+  } else if (targetClient.authorization === undefined) {
+    return [sourceClient.authorization, new Authorization(targetClient)];
+  } else {
+    return [new Authorization(sourceClient), targetClient.authorization];
+  }
 };
